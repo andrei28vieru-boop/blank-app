@@ -3,8 +3,8 @@ import random, string, hashlib, requests
 
 st.set_page_config(page_title="AEGIS AI", page_icon="🛡️")
 st.title("🏛️ AEGIS AI - The Unbreakable Sentinel")
-st.caption("AI Intelligence · Gratuit · Fără Restricții")
 
+# ---------- FILTRU DE SIGURANȚĂ ----------
 BLOCKED_TERMS = ["prostituție", "droguri", "violență", "spargere"]
 
 def hash_data(data): return hashlib.sha256(data.encode()).hexdigest()
@@ -14,44 +14,48 @@ def is_safe_question(question):
         if term in question.lower(): return False
     return True
 
-def aegis_execute(command):
+def ask_deepseek(question, mode="fast"):
     try:
-        api_key = st.secrets["DEEPSEEK_API_KEY"]
+        # Cheia API este acum direct în cod, nu mai e nevoie de Secrets
+        api_key = "sk-447a3b0e07e74e8a865f7468b9a7ce2e"
         url = "https://api.deepseek.com/v1/chat/completions"
         headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
-        data = {"model": "deepseek-chat", "messages": [{"role": "user", "content": command}], "stream": False}
+        
+        system_message = "Ești AEGIS, un asistent AI creat de Andrei Vieru."
+        if mode == "expert":
+            system_message += " Oferă răspunsuri extrem de detaliate, tehnice și precise."
+        elif mode == "thing":
+            system_message += " Analizează cu atenție orice link sau document primit și oferă un rezumat structurat."
+        
+        data = {
+            "model": "deepseek-chat",
+            "messages": [
+                {"role": "system", "content": system_message},
+                {"role": "user", "content": question}
+            ],
+            "stream": False
+        }
         response = requests.post(url, headers=headers, json=data)
         return response.json()["choices"][0]["message"]["content"]
     except:
-        return "Eroare la procesarea cererii. Verifică conexiunea ta de internet."
+        return "🤖 AEGIS: Momentan am o mică problemă de conexiune. Verifică internetul și încearcă din nou."
 
-# ---------- STAREA SESIUNII ----------
+# ---------- GESTIUNEA SESIUNII ----------
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 if "user_db" not in st.session_state:
     st.session_state.user_db = {}
-if "agreed_to_terms" not in st.session_state:
-    st.session_state.agreed_to_terms = False
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+if "search_mode" not in st.session_state:
+    st.session_state.search_mode = "fast"
 
-# ---------- INTERFAȚA PRINCIPALĂ ----------
-if not st.session_state.agreed_to_terms:
-    st.warning("⚠️ Te rugăm să confirmi înainte de a continua.")
-    if st.checkbox("Înțeleg că acest AI oferă informații generale și că trebuie să fiu responsabil(ă) în utilizarea lui."):
-        if st.button("Confirm și Intru în AEGIS"):
-            st.session_state.agreed_to_terms = True
-            st.rerun()
-
-elif not st.session_state.logged_in:
-    st.subheader("Autentificare sau testare rapidă")
-    auth_choice = st.radio("Alege o opțiune:", ["Intru ca Vizitator Anonim", "Autentificare", "Creează Cont Nou"])
+# ---------- AUTENTIFICARE ----------
+if not st.session_state.logged_in:
+    st.subheader("Autentificare sau Înregistrare")
+    auth_choice = st.radio("Alege o opțiune:", ["Autentificare", "Creează Cont Nou"])
     
-    if auth_choice == "Intru ca Vizitator Anonim":
-        if st.button("Intră"):
-            st.session_state.logged_in = True
-            st.session_state.user = "Vizitator"
-            st.success(f"Bun venit, Vizitatorule!")
-            st.rerun()
-    elif auth_choice == "Autentificare":
+    if auth_choice == "Autentificare":
         user = st.text_input("👤 Utilizator")
         pin = st.text_input("🔑 Parolă", type="password")
         if st.button("Autentificare"):
@@ -70,22 +74,39 @@ elif not st.session_state.logged_in:
             elif len(new_pin) < 4: st.error("Parola trebuie să aibă minim 4 caractere.")
             else:
                 st.session_state.user_db[new_user] = hash_data(new_pin)
-                st.success("Cont creat cu succes!")
+                st.success("Cont creat! Acum te poți autentifica.")
                 st.info("Selectează 'Autentificare' și folosește datele tale.")
 
+# ---------- INTERFAȚA PRINCIPALĂ (CA DEEPSEEK) ----------
 else:
-    st.success(f"⚔️ {st.session_state.user} > AEGIS este pregătit.")
-    user_input = st.text_input("Scrie orice întrebare...")
-    
-    if st.button("Trimite"):
-        if is_safe_question(user_input):
-            with st.spinner("AEGIS procesează..."):
-                response = aegis_execute(user_input)
-                st.write(response)
-        else:
-            st.warning("AEGIS este un AI pentru educație și securitate.")
+    col1, col2, col3 = st.columns([2, 1, 1])
+    with col1:
+        st.caption(f"Conectat ca: {st.session_state.user}")
+    with col2:
+        mode_map = {"⚡ Fast": "fast", "🧠 Expert": "expert", "🔗 Thing": "thing"}
+        selected = st.selectbox("Mod", list(mode_map.keys()), label_visibility="collapsed")
+        st.session_state.search_mode = mode_map[selected]
+    with col3:
+        if st.button("➕ Nou"):
+            st.session_state.messages = []
+            st.rerun()
 
-    if st.button("Deconectare"):
-        st.session_state.logged_in = False
-        st.session_state.agreed_to_terms = False
-        st.rerun()
+    for msg in st.session_state.messages:
+        if msg["role"] == "user":
+            st.chat_message("user").write(msg["content"])
+        else:
+            st.chat_message("assistant").write(msg["content"])
+
+    if prompt := st.chat_input("Scrie un mesaj..."):
+        if not is_safe_question(prompt):
+            st.warning("AEGIS este un AI pentru educație și securitate.")
+        else:
+            st.session_state.messages.append({"role": "user", "content": prompt})
+            with st.chat_message("user"):
+                st.write(prompt)
+
+            with st.chat_message("assistant"):
+                with st.spinner(f"AEGIS se gândește..."):
+                    response = ask_deepseek(prompt, st.session_state.search_mode)
+                    st.write(response)
+                    st.session_state.messages.append({"role": "assistant", "content": response})
