@@ -1,11 +1,14 @@
 import streamlit as st
 import random, string, hashlib, requests
 
-st.set_page_config(page_title="AEGIS AI", page_icon="🛡️")
-st.title("🏛️ AEGIS AI - The Unbreakable Sentinel")
+st.set_page_config(page_title="AEGIS AI", page_icon="⚡")
+st.title("AEGIS AI")
+st.caption("Advanced Engineered General Intelligence System")
 
-# ---------- FILTRU DE SIGURANȚĂ ----------
-BLOCKED_TERMS = ["prostituție", "droguri", "violență", "spargere"]
+# ==========================================
+# FILTRU DE SIGURANȚĂ
+# ==========================================
+BLOCKED_TERMS = ["prostituție", "droguri", "violență", "spargere", "furt", "omucidere"]
 
 def hash_data(data): return hashlib.sha256(data.encode()).hexdigest()
 
@@ -14,14 +17,58 @@ def is_safe_question(question):
         if term in question.lower(): return False
     return True
 
+# ==========================================
+# BIBLIOTECA SUPREMĂ DE CUNOȘTINȚE (OFFLINE)
+# ==========================================
+if "knowledge" not in st.session_state:
+    st.session_state.knowledge = {
+        # --- Cunoștințe de Securitate ---
+        "api": "Un API (Application Programming Interface) este un set de reguli care permite două aplicații software să comunice între ele.",
+        "hash": "Un hash este o amprentă digitală unică, rezultatul unei funcții matematice care transformă datele într-un șir de caractere.",
+        "parolă": "O parolă este o cheie secretă, formată dintr-un șir de caractere, folosită pentru autentificare și protecția conturilor.",
+        "securitate cibernetică": "Practica de a proteja sistemele, rețelele și programele de atacuri digitale.",
+        "aegis": "AEGIS este un AI creat de Andrei Vieru, un sistem avansat de inteligență artificială.",
+        # --- Cunoștințe de Programare & Python ---
+        "python": "Un limbaj de programare versatil. Resurse oficiale: [python.org](https://www.python.org)",
+        "variabilă": "O variabilă este ca o cutie în care poți păstra o valoare. În Python, o creezi simplu: `x = 5`.",
+        "listă": "O listă este o colecție ordonată de elemente, care poate fi modificată. Se scrie între paranteze pătrate: `[1, 2, 3]`.",
+        "dicționar": "Un dicționar este o colecție de perechi cheie-valoare. Se scrie între acolade: `{'nume': 'Andrei', 'vârstă': 15}`.",
+        "funcție": "O funcție este un bloc de cod reutilizabil care face o anumită sarcină. Se definește cu `def`: `def salut(): print('Salut!')`.",
+        "buclă": "O buclă (loop) este o instrucțiune care repetă o bucată de cod. `for` și `while` sunt cele mai comune în Python.",
+        "clasă": "O clasă (class) este un șablon pentru crearea de obiecte. Este fundamentul Programării Orientate pe Obiecte (OOP).",
+        "tkinter": "Tkinter este o bibliotecă standard Python pentru crearea de interfețe grafice (GUI). Cu ea poți face ferestre, butoane și jocuri.",
+        # --- Cunoștințe de Tehnologie & AI ---
+        "ai": "Inteligența Artificială (AI) este simularea proceselor de inteligență umană de către mașini, în special sisteme informatice.",
+        "deepseek": "DeepSeek este un asistent AI avansat, creat de o companie chineză, specializat în înțelegerea și generarea de text complex.",
+        "npci": "NPU înseamnă Neural Processing Unit, un procesor specializat pentru accelerarea calculelor de inteligență artificială.",
+        "samsung": "Samsung este o companie globală, lider în tehnologie, care produce telefoane Galaxy, laptopuri Galaxy Book, ceasuri și alte dispozitive inteligente.",
+        "bixby": "Bixby este asistentul virtual inteligent de la Samsung, integrat în telefoane, tablete, ceasuri și electrocasnice.",
+        "galaxy ai": "Galaxy AI este suita de funcții de inteligență artificială de la Samsung.",
+        "galaxy watch": "Galaxy Watch este seria de ceasuri inteligente de la Samsung.",
+        "galaxy book": "Galaxy Book este seria de laptopuri premium de la Samsung.",
+        # --- Cunoștințe de Business & Finanțe ---
+        "criptomonedă": "O monedă digitală descentralizată, securizată prin criptografie. Exemple: Bitcoin (BTC), Ethereum (ETH).",
+        "bitcoin": "Prima și cea mai cunoscută criptomonedă, creată în 2009.",
+        "blockchain": "Un registru digital distribuit și imutabil, folosit pentru a înregistra tranzacții sigur.",
+        "acțiune": "O unitate de proprietate într-o companie.",
+        "bursă": "O piață organizată unde se tranzacționează acțiuni și alte instrumente financiare.",
+        "economie": "Știința care studiază producția, distribuția și consumul de bunuri și servicii.",
+        # --- Cunoștințe Generale ---
+        "românia": "O țară în Europa de Est. Capitala: București.",
+        "imperiul roman": "Unul dintre cele mai mari imperii din istorie.",
+        "piramidă": "Construcție monumentală. Cele mai faimoase sunt în Egipt.",
+    }
+
+# ==========================================
+# CONEXIUNEA LA DEEPSEEK (ONLINE)
+# ==========================================
 def ask_deepseek(question, mode="fast"):
     try:
-        # Cheia API este acum direct în cod, nu mai e nevoie de Secrets
         api_key = "sk-447a3b0e07e74e8a865f7468b9a7ce2e"
         url = "https://api.deepseek.com/v1/chat/completions"
         headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
         
-        system_message = "Ești AEGIS, un asistent AI creat de Andrei Vieru."
+        system_message = "Ești AEGIS, un sistem AI avansat creat de Andrei Vieru."
         if mode == "expert":
             system_message += " Oferă răspunsuri extrem de detaliate, tehnice și precise."
         elif mode == "thing":
@@ -38,9 +85,11 @@ def ask_deepseek(question, mode="fast"):
         response = requests.post(url, headers=headers, json=data)
         return response.json()["choices"][0]["message"]["content"]
     except:
-        return "🤖 AEGIS: Momentan am o mică problemă de conexiune. Verifică internetul și încearcă din nou."
+        return "Eroare de rețea. Verifică conexiunea la internet."
 
-# ---------- GESTIUNEA SESIUNII ----------
+# ==========================================
+# GESTIUNEA SESIUNII (MEMORIE)
+# ==========================================
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 if "user_db" not in st.session_state:
@@ -50,10 +99,12 @@ if "messages" not in st.session_state:
 if "search_mode" not in st.session_state:
     st.session_state.search_mode = "fast"
 
-# ---------- AUTENTIFICARE ----------
+# ==========================================
+# AUTENTIFICARE
+# ==========================================
 if not st.session_state.logged_in:
-    st.subheader("Autentificare sau Înregistrare")
-    auth_choice = st.radio("Alege o opțiune:", ["Autentificare", "Creează Cont Nou"])
+    st.subheader("Autentificare")
+    auth_choice = st.radio("Opțiuni:", ["Autentificare", "Creează Cont Nou"])
     
     if auth_choice == "Autentificare":
         user = st.text_input("👤 Utilizator")
@@ -75,13 +126,14 @@ if not st.session_state.logged_in:
             else:
                 st.session_state.user_db[new_user] = hash_data(new_pin)
                 st.success("Cont creat! Acum te poți autentifica.")
-                st.info("Selectează 'Autentificare' și folosește datele tale.")
 
-# ---------- INTERFAȚA PRINCIPALĂ (CA DEEPSEEK) ----------
+# ==========================================
+# INTERFAȚA PRINCIPALĂ
+# ==========================================
 else:
     col1, col2, col3 = st.columns([2, 1, 1])
     with col1:
-        st.caption(f"Conectat ca: {st.session_state.user}")
+        st.caption(f"Conectat: {st.session_state.user}")
     with col2:
         mode_map = {"⚡ Fast": "fast", "🧠 Expert": "expert", "🔗 Thing": "thing"}
         selected = st.selectbox("Mod", list(mode_map.keys()), label_visibility="collapsed")
@@ -106,7 +158,17 @@ else:
                 st.write(prompt)
 
             with st.chat_message("assistant"):
-                with st.spinner(f"AEGIS se gândește..."):
-                    response = ask_deepseek(prompt, st.session_state.search_mode)
-                    st.write(response)
-                    st.session_state.messages.append({"role": "assistant", "content": response})
+                with st.spinner("AEGIS se gândește..."):
+                    # Caută mai întâi în biblioteca offline
+                    found = False
+                    for key in st.session_state.knowledge:
+                        if key in prompt.lower():
+                            st.write(st.session_state.knowledge[key])
+                            st.session_state.messages.append({"role": "assistant", "content": st.session_state.knowledge[key]})
+                            found = True
+                            break
+                    # Dacă nu găsește, întreabă DeepSeek
+                    if not found:
+                        response = ask_deepseek(prompt, st.session_state.search_mode)
+                        st.write(response)
+                        st.session_state.messages.append({"role": "assistant", "content": response})
